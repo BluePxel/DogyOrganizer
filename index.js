@@ -2,50 +2,63 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const axios = require('axios');
 const express = require('express');
 
-// Configuración de Express para Render
+// --- 1. CONFIGURACIÓN DEL SERVIDOR ---
 const app = express();
-app.get('/', (req, res) => res.send('Bot funcionando 🚀'));
-app.listen(process.env.PORT || 3000); 
+app.get('/', (req, res) => res.send('Bot Status: Online 🚀'));
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Servidor web en puerto ${port}`));
 
+// --- 2. INICIALIZACIÓN DEL BOT ---
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ]
+});
+
+client.once('ready', () => {
+  console.log(`Bot conectado como ${client.user.tag}`);
+});
+
+// --- 3. LÓGICA DE COMANDOS ---
 client.on('messageCreate', async (message) => {
+  // Ignorar mensajes de otros bots
   if (message.author.bot) return;
 
-  // 1. Detección del comando /r
+  // COMANDO ÚNICO: /r (Prioridades 0-5)
   if (message.content.startsWith('/r')) {
-    // Dividimos el mensaje para separar el comando del valor
     const args = message.content.split(' ');
-    const input = args[1]; // Lo que sigue después de /r
+    const input = args[1];
 
-    // CASO A: No hay texto (solo escribió /r)
+    // CASO A: No hay texto (ej. solo escribió "/r")
     if (!input) {
       return message.channel.send('https://tenor.com/b12jl.gif');
     }
 
-    // CASO B: Es un número entre 0 y 5
-    // Usamos una expresión regular para asegurar que sea UN solo dígito del 0 al 5
+    // CASO B: Validación de número del 0 al 5
     const esNumeroValido = /^[0-5]$/.test(input);
 
     if (esNumeroValido) {
-      const prioridad = input;
-      const respuesta = `El usuario <@${message.author.id}> ha usado su prioridad No.${prioridad}`;
-      
-      // Enviamos la respuesta a Discord
-      await message.channel.send(respuesta);
+      // Respondemos tagueando al usuario
+      await message.channel.send(`El usuario <@${message.author.id}> ha usado su prioridad No.${input}`);
 
-      // Opcional: Guardar también en Google Sheets (manteniendo tu lógica anterior)
+      // Guardamos la acción en Google Sheets de forma silenciosa
       try {
         await axios.post(process.env.GOOGLE_SCRIPT_URL, {
           user: message.author.tag,
-          content: `Usó prioridad: ${prioridad}`,
+          content: `Usó prioridad: ${input}`,
           channel: message.channel.name
         });
-      } catch (error) {
-        console.error("Error al guardar en Sheets:", error);
+      } catch (e) {
+        console.error('Error al registrar en Sheets:', e.message);
       }
-      return;
+    } else {
+      // CASO C: El usuario escribió algo inválido
+      return message.reply(`Aqui solo aceptamos prioridades de 0 a 5, no tus mamadas de ${input}`);
     }
-
-    // CASO C: Escribió algo que no es un número del 0 al 5
-    return message.reply(`Aqui solo aceptamos prioridades de 0 a 5, no tus mamadas de ${input}`);
   }
 });
+
+// --- 4. LOGIN ---
+client.login(process.env.DISCORD_TOKEN);
