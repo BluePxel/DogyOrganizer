@@ -1,3 +1,12 @@
+const { Client, GatewayIntentBits } = require('discord.js');
+const axios = require('axios');
+const express = require('express');
+
+// Configuración de Express para Render
+const app = express();
+app.get('/', (req, res) => res.send('Bot funcionando 🚀'));
+app.listen(process.env.PORT || 3000); 
+
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
